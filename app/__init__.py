@@ -9,4 +9,11 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     
+    #create database tables
+    with app.app_context():
+        db.create_all()
+
+    from .auth import auth_bp
+    app.register_blueprint(auth_bp,url_prefix="/auth")
+
     return app
