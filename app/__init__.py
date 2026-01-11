@@ -10,14 +10,16 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     limiter.init_app(app)
-    
     # Initialize Flask-Migrate (like openbuild)
     migrate = Migrate(app, db)
     
     # Import models AFTER migrate initialization
     from .models import User
 
-    from .auth import auth_bp
-    app.register_blueprint(auth_bp,url_prefix="/auth")
+    from .routes import auth_bp
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+    
+    from .routes import user_bp
+    app.register_blueprint(user_bp, url_prefix="/users")
 
     return app
