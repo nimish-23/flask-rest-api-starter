@@ -1,6 +1,6 @@
 from flask import Flask 
 from .config import Config
-from .extensions import db, jwt
+from .extensions import db, jwt, limiter
 
 def create_app():
     app = Flask(__name__)
@@ -8,6 +8,7 @@ def create_app():
     
     db.init_app(app)
     jwt.init_app(app)
+    limiter.init_app(app)
     
     #create database tables
     with app.app_context():
