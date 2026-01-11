@@ -356,6 +356,62 @@ def protected():
     return jsonify(user_id=current_user_id), 200
 ```
 
+### Logout with JWT
+
+**Important**: JWT tokens are **stateless** - the server doesn't track them. Logout is handled differently than session-based auth.
+
+**Method 1: Client-Side Logout** (Recommended for simple apps)
+
+The client simply deletes the token from storage:
+
+```javascript
+// Frontend (JavaScript)
+localStorage.removeItem("access_token"); // Delete token
+// User is now "logged out"
+```
+
+**Backend Logout Endpoint** (Optional):
+
+```python
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    # JWT logout is client-side, but this endpoint confirms the action
+    return jsonify({"message": "Logged out successfully"}), 200
+```
+
+**Method 2: Token Blacklisting** (For production apps)
+
+Maintain a blacklist of revoked tokens on the server:
+
+```python
+# Using Flask-JWT-Extended's built-in blacklist
+from flask_jwt_extended import jwt_required, get_jwt
+
+# In-memory blacklist (use Redis in production)
+blacklist = set()
+
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header, jwt_payload):
+    jti = jwt_payload["jti"]  # JWT ID
+    return jti in blacklist
+
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    jti = get_jwt()["jti"]
+    blacklist.add(jti)  # Add token to blacklist
+    return jsonify({"message": "Logged out successfully"}), 200
+```
+
+**Token Blacklist Options**:
+
+- **In-Memory Set**: Simple but lost on server restart
+- **Redis**: Fast, persistent, production-ready
+- **Database**: Permanent storage, slower queries
+
+**Best Practice**: For most projects, client-side logout is sufficient. Use blacklisting only if you need to force logout (e.g., compromised tokens, user account deletion).
+
 ### Password Hashing
 
 **Never store plain passwords!**
@@ -602,6 +658,100 @@ git add .
 git commit -m "Your message"
 git push origin main
 ```
+
+---
+
+## Troubleshooting
+
+### Python 3.13.7 SQLite "Readonly Database" Error
+
+**Error Message**:
+
+```
+sqlite3.OperationalError: attempt to write a readonly database
+```
+
+**Symptoms**:
+
+- Getting **500 Internal Server Error** when trying to register users
+- Database queries fail with readonly error
+- Only occurs with Python 3.13.7 + SQLite
+
+**Root Cause**:
+
+Python 3.13.7 has a compatibility issue with SQLite when using `db.create_all()`:
+
+```python
+# ❌ This triggers the bug in Python 3.13.7
+with app.app_context():
+    db.create_all()
+```
+
+**Solution**: Use Flask-Migrate Instead
+
+Flask-Migrate is the production-standard way to handle databases and bypasses this issue:
+
+**Step 1**: Update `app/__init__.py`
+
+```python
+from flask import Flask
+from .config import Config
+from .extensions import db, jwt, limiter
+from flask_migrate import Migrate  # Add this import
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    db.init_app(app)
+    jwt.init_app(app)
+    limiter.init_app(app)
+
+    # ✅ Use Flask-Migrate instead of db.create_all()
+    migrate = Migrate(app, db)
+
+    # Import models AFTER migrate initialization
+    from .models import User
+
+    from .auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+
+    return app
+```
+
+**Step 2**: Initialize and run migrations
+
+```bash
+# Initialize migrations folder (one time only)
+flask db init
+
+# Create initial migration
+flask db migrate -m "Initial migration"
+
+# Apply migration to database
+flask db upgrade
+```
+
+**Step 3**: Add to requirements.txt
+
+```
+Flask-Migrate==4.0.7
+```
+
+**Why This Works**:
+
+- Flask-Migrate uses Alembic for database migrations
+- It creates tables using a different method that doesn't trigger the Python 3.13.7 bug
+- This is also the **industry standard** for production applications
+- Allows proper database version control
+
+**Benefits of Using Flask-Migrate**:
+
+1. ✅ Fixes the Python 3.13.7 SQLite issue
+2. ✅ Production-ready database management
+3. ✅ Version control for database schema
+4. ✅ Easy to roll back changes
+5. ✅ Works with all Python versions
 
 ---
 

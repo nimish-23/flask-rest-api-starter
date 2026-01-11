@@ -24,8 +24,11 @@ def register():
     password = data.get("password")
     username = data.get("username")
 
-    user = User.query.filter((User.email==email) | (User.username==username)).first()
-    if user:
+    # Check if user with email or username already exists
+    user_by_email = db.session.query(User).filter_by(email=email).first()
+    user_by_username = db.session.query(User).filter_by(username=username).first()
+    
+    if user_by_email or user_by_username:
         return jsonify({"error":"User already exists"}),409
 
     hashed_password = generate_password_hash(password)
@@ -52,9 +55,17 @@ def login():
     email = data.get("email")
     password = data.get("password")
 
-    user = User.query.filter_by(email=email).first()
+    user = db.session.query(User).filter_by(email=email).first()
     if not user or not check_password_hash(user.password, password):
         return jsonify({"error":"Invalid credentials"}),401
 
     access_token = create_access_token(identity=user.id)
     return jsonify({"access_token":access_token,"token_type":"Bearer"}),200
+
+@auth_bp.route("/logout",methods=["POST"])
+@jwt_required()
+def logout():
+    try:
+        return jsonify({"message":"Logged out successfully"}),200
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
