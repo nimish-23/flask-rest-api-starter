@@ -6,6 +6,7 @@ A production-ready Flask REST API boilerplate with JWT authentication, database 
 
 - ✅ **Application Factory Pattern** - Scalable app initialization
 - ✅ **JWT Authentication** - Secure token-based auth with Flask-JWT-Extended
+- ✅ **Role-Based Access Control (RBAC)** - Admin role system with `@admin_required` decorator
 - ✅ **Database Migrations** - Flask-Migrate (Alembic) for schema versioning
 - ✅ **Input Validation** - Marshmallow schemas for data validation
 - ✅ **Rate Limiting** - Flask-Limiter to prevent API abuse
@@ -23,14 +24,18 @@ flask-rest-api-starter/
 │   ├── extensions.py        # Extension initializations (db, jwt, limiter)
 │   ├── models/
 │   │   ├── __init__.py      # Model exports
-│   │   └── user.py          # User model (with to_dict, created_at)
+│   │   └── user.py          # User model (with is_admin, to_dict)
 │   ├── schemas/
 │   │   ├── __init__.py      # Schema exports
-│   │   └── user_schema.py   # Registration & Login schemas
-│   └── routes/
-│       ├── __init__.py      # Blueprint exports
-│       ├── auth.py          # Auth routes (register, login, logout)
-│       └── user.py          # User routes (profile)
+│   │   └── user_schema.py   # Registration, Login & Update schemas
+│   ├── routes/
+│   │   ├── __init__.py      # Blueprint exports
+│   │   ├── auth.py          # Auth routes (register, login, logout)
+│   │   └── user.py          # User routes (CRUD + list)
+│   ├── utils/
+│   │   └── decorators.py    # Custom decorators (@admin_required)
+│   └── scripts/
+│       └── create_admin.py  # Admin user creation script
 ├── migrations/              # Database migrations (Flask-Migrate)
 ├── instance/                # SQLite database (local development)
 ├── .env                     # Environment variables
@@ -123,9 +128,14 @@ gunicorn -w 4 -b 0.0.0.0:8000 run:app
 
 ### User (`/users`)
 
-| Method | Endpoint    | Auth | Rate Limit | Description              |
-| ------ | ----------- | ---- | ---------- | ------------------------ |
-| GET    | `/users/me` | Yes  | 10/min     | Get current user profile |
+| Method | Endpoint    | Auth        | Rate Limit | Description                              |
+| ------ | ----------- | ----------- | ---------- | ---------------------------------------- |
+| GET    | `/users/me` | Yes         | 10/min     | Get current user profile                 |
+| PATCH  | `/users/me` | Yes         | 10/min     | Update profile (username/email/password) |
+| DELETE | `/users/me` | Yes         | 10/min     | Delete current user account              |
+| GET    | `/users`    | Yes (Admin) | 10/min     | List all users (admin only, paginated)   |
+
+> **Note:** The `GET /users` endpoint requires admin privileges (`is_admin = true`).
 
 ### Example Requests
 
@@ -151,6 +161,61 @@ curl -X POST http://127.0.0.1:5000/auth/login \
 curl -X GET http://127.0.0.1:5000/users/me \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
+
+**Update Profile:**
+
+```bash
+curl -X PATCH http://127.0.0.1:5000/users/me \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{"username":"newusername","email":"newemail@example.com"}'
+```
+
+**Delete Account:**
+
+```bash
+curl -X DELETE http://127.0.0.1:5000/users/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**List Users (with pagination):**
+
+```bash
+curl -X GET "http://127.0.0.1:5000/users?page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**List Users (Admin Only):**
+
+```bash
+curl -X GET "http://127.0.0.1:5000/users?page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+## Admin Setup
+
+Create an admin user using the interactive script:
+
+```bash
+python -m app.scripts.create_admin
+```
+
+**Example:**
+
+```
+Enter username: admin
+Enter email: admin@example.com
+Enter password: securepassword123
+
+Admin user created successfully
+```
+
+The script will:
+
+- ✅ Validate input (username min 3 chars, password min 6 chars, valid email)
+- ✅ Check for duplicate username/email
+- ✅ Hash password securely
+- ✅ Create user with `is_admin = True`
 
 ## Configuration
 
@@ -201,6 +266,38 @@ flask db downgrade
 If you encounter `readonly database` errors on Python 3.13+, ensure you're using **Flask-Migrate** instead of `db.create_all()`. This project already implements this fix.
 
 See `DOCS.md` for detailed troubleshooting guide.
+
+## Future Enhancements
+
+This project serves as a solid foundation for a production REST API. Potential improvements include:
+
+### Testing
+
+- **Unit Tests** - pytest for testing models and utilities
+- **Integration Tests** - Test API endpoints with test database
+- **Code Coverage** - pytest-cov for coverage reports
+- **CI/CD Pipeline** - GitHub Actions for automated testing
+
+### API Features
+
+- **Swagger/OpenAPI Documentation** - Interactive API docs with Flasgger
+- **API Versioning** - URL-based versioning (`/api/v1/`, `/api/v2/`)
+- **Advanced Pagination** - Cursor-based pagination for large datasets
+- **Search & Filtering** - Query parameters for advanced filtering
+
+### Infrastructure
+
+- **Docker Support** - Dockerfile and docker-compose.yml
+- **PostgreSQL** - Production database configuration
+- **Caching Layer** - Redis integration for performance
+- **Logging & Monitoring** - Structured logging with ELK stack
+
+### Security
+
+- **Email Verification** - Confirm user emails on registration
+- **Password Reset Flow** - Email-based password recovery
+- **OAuth Integration** - Social login (Google, GitHub)
+- **API Key Authentication** - Alternative authentication method
 
 ## License
 
