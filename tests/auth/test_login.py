@@ -8,8 +8,9 @@ def test_login_success(client, test_user):
     })
     
     assert response.status_code == 200
-    assert 'access_token' in response.json
-    assert response.json['token_type'] == 'Bearer'
+    data = response.get_json()
+    assert 'access_token' in data
+    assert data['token_type'] == 'Bearer'
 
 
 def test_login_wrong_password(client, test_user):
@@ -20,7 +21,8 @@ def test_login_wrong_password(client, test_user):
     })
     
     assert response.status_code == 401
-    assert response.json['error'] == 'Invalid credentials'
+    data = response.get_json()
+    assert data['error'] == 'Invalid credentials'
 
 
 def test_login_user_not_found(client):
@@ -31,7 +33,8 @@ def test_login_user_not_found(client):
     })
     
     assert response.status_code == 401
-    assert response.json['error'] == 'Invalid credentials'
+    data = response.get_json()
+    assert data['error'] == 'Invalid credentials'
 
 
 def test_login_missing_email(client):
@@ -41,7 +44,8 @@ def test_login_missing_email(client):
     })
     
     assert response.status_code == 400
-    assert 'error' in response.json
+    data = response.get_json()
+    assert 'error' in data
 
 
 def test_login_invalid_email_format(client):
@@ -52,4 +56,5 @@ def test_login_invalid_email_format(client):
     })
     
     assert response.status_code == 400
-    assert 'error' in response.json
+    data = response.get_json()
+    assert 'error' in data

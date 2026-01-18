@@ -16,7 +16,7 @@ def get_me():
     
     current_user_id = get_jwt_identity()
 
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
     
@@ -32,7 +32,7 @@ def get_me():
 def delete_me():
     current_user_id = get_jwt_identity()
 
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
@@ -48,7 +48,7 @@ def patch_me():
     """Update current user's profile (username, email, and/or password)"""
     current_user_id = get_jwt_identity()
     
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
     

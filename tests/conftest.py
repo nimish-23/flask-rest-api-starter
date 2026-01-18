@@ -47,8 +47,10 @@ def test_user(app):
         
         yield user
         
-        _db.session.delete(user)
-        _db.session.commit()
+        # Only delete if user still exists (test might have deleted it)
+        if _db.session.get(User, user.id):
+            _db.session.delete(user)
+            _db.session.commit()
 
 
 @pytest.fixture(scope='function')
@@ -58,7 +60,8 @@ def auth_headers(client, test_user):
         'email': 'test@example.com',
         'password': 'password123'
     })
-    token = response.json['access_token']
+    data = response.get_json()
+    token = data['access_token']
     return {'Authorization': f'Bearer {token}'}
 
 
@@ -78,8 +81,10 @@ def admin_user(app):
         
         yield admin
         
-        _db.session.delete(admin)
-        _db.session.commit()
+        # Only delete if admin still exists (test might have deleted it)
+        if _db.session.get(User, admin.id):
+            _db.session.delete(admin)
+            _db.session.commit()
 
 
 @pytest.fixture(scope='function')
@@ -89,7 +94,8 @@ def admin_headers(client, admin_user):
         'email': 'admin@example.com',
         'password': 'password123'
     })
-    token = response.json['access_token']
+    data = response.get_json()
+    token = data['access_token']
     return {'Authorization': f'Bearer {token}'}
 
 

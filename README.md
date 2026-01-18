@@ -66,7 +66,6 @@ flask-rest-api-starter/
    ```
 
 3. **Activate the virtual environment**
-
    - Windows:
      ```bash
      env\Scripts\activate
@@ -267,16 +266,228 @@ If you encounter `readonly database` errors on Python 3.13+, ensure you're using
 
 See `DOCS.md` for detailed troubleshooting guide.
 
+## Testing
+
+This project includes comprehensive test coverage using **pytest**. All API endpoints are tested with various scenarios including success cases, validation errors, authentication failures, and edge cases.
+
+### Test Structure
+
+```
+tests/
+├── conftest.py              # Shared fixtures (client, test_user, auth_headers, etc.)
+├── auth/
+│   ├── test_register.py     # Registration endpoint tests
+│   └── test_login.py        # Login endpoint tests
+└── user/
+    ├── test_get_user.py     # GET /users/me tests
+    ├── test_update_user.py  # PATCH /users/me tests
+    └── test_delete_user.py  # DELETE /users/me tests
+```
+
+### Running Tests
+
+**Install pytest:**
+
+```bash
+pip install pytest
+```
+
+**Run all tests:**
+
+```bash
+pytest tests
+```
+
+**Run with verbose output:**
+
+```bash
+pytest tests -v
+```
+
+**Run specific test file:**
+
+```bash
+pytest tests/auth/test_register.py -v
+```
+
+**Run specific test function:**
+
+```bash
+pytest tests/auth/test_register.py::test_register_success -v
+```
+
+### Test Coverage
+
+#### Authentication Tests (`tests/auth/`)
+
+**Register (`test_register.py`):**
+
+- ✅ Successful registration
+- ✅ Duplicate email/username (409 Conflict)
+- ✅ Invalid field values (short password, invalid email, short username)
+- ✅ Missing required fields
+- ✅ Wrong data types
+- ✅ Invalid content type (415 Unsupported Media Type)
+
+**Login (`test_login.py`):**
+
+- ✅ Successful login with valid credentials
+- ✅ Wrong password (401 Unauthorized)
+- ✅ Non-existent user (401 Unauthorized)
+- ✅ Missing email field (400 Bad Request)
+- ✅ Invalid email format (400 Bad Request)
+
+#### User Tests (`tests/user/`)
+
+**Get Profile (`test_get_user.py`):**
+
+- ✅ Get current user profile with valid auth
+- ✅ Authentication failures (missing header, invalid token, invalid format)
+
+**Update Profile (`test_update_user.py`):**
+
+- ✅ Successful update (username, email, password)
+- ✅ Authentication failures
+- ✅ Invalid data validation (short username, invalid email, weak password)
+- ✅ Valid partial updates (single field, multiple fields, empty update)
+
+**Delete Account (`test_delete_user.py`):**
+
+- ✅ Successful account deletion
+- ✅ Authentication failures
+
+### Common Testing Errors & Fixes
+
+During development, we encountered and resolved several common testing issues:
+
+#### 1️⃣ **Flask Test Client Deprecation Warning**
+
+**Error:**
+
+```python
+# ❌ Deprecated - causes warning
+assert 'message' in response.json
+assert response.json['access_token'] == "..."
+```
+
+**Fix:**
+
+```python
+# ✅ Correct - use get_json() method
+data = response.get_json()
+assert 'message' in data
+assert data['access_token'] == "..."
+```
+
+**Why:** Flask's test client `response.json` as a property is deprecated. Always use `response.get_json()` method.
+
+#### 2️⃣ **SQLAlchemy 2.0 Query.get() Deprecation**
+
+**Error:**
+
+```python
+# ❌ Deprecated in SQLAlchemy 2.0
+user = User.query.get(user_id)
+```
+
+**Warning:**
+
+```
+LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series
+of SQLAlchemy and becomes a legacy construct in 2.0.
+```
+
+**Fix:**
+
+```python
+# ✅ SQLAlchemy 2.0 compliant
+user = db.session.get(User, user_id)
+```
+
+**Files Updated:**
+
+- `app/routes/user.py` (3 instances in `get_me()`, `patch_me()`, `delete_me()`)
+
+#### 3️⃣ **SQLAlchemy DELETE Warning in Fixtures**
+
+**Error:**
+
+```
+SAWarning: DELETE statement on table 'users' expected to delete 1 row(s); 0 were matched.
+Please set confirm_deleted_rows=False within the mapper configuration to prevent this warning.
+```
+
+**Root Cause:** Test fixtures tried to delete users that were already deleted by the test itself.
+
+**Fix in `conftest.py`:**
+
+```python
+@pytest.fixture(scope='function')
+def test_user(app):
+    with app.app_context():
+        user = User(...)
+        _db.session.add(user)
+        _db.session.commit()
+        _db.session.refresh(user)
+
+        yield user
+
+        # ✅ Only delete if user still exists (test might have deleted it)
+        if _db.session.get(User, user.id):
+            _db.session.delete(user)
+            _db.session.commit()
+```
+
+**Applied to fixtures:**
+
+- `test_user` fixture
+- `admin_user` fixture
+
+### Test Configuration
+
+**`conftest.py` provides shared fixtures:**
+
+- **`app`** - Flask app with test configuration (in-memory SQLite)
+- **`client`** - Test client for making requests
+- **`test_user`** - Pre-created test user with cleanup
+- **`auth_headers`** - Valid JWT authentication headers
+- **`admin_user`** - Pre-created admin user
+- **`admin_headers`** - Valid admin JWT headers
+- **`multiple_users`** - 15 test users for pagination testing
+
+**Key configurations:**
+
+```python
+app.config.update({
+    'TESTING': True,
+    'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',  # In-memory DB
+    'JWT_SECRET_KEY': 'test-secret-key',
+})
+
+# Disable rate limiting for tests
+limiter.enabled = False
+```
+
+### Best Practices Implemented
+
+✅ **Parameterized tests** - Test multiple scenarios with `@pytest.mark.parametrize`  
+✅ **Proper fixtures** - Reusable components with automatic cleanup  
+✅ **In-memory database** - Fast test execution with `sqlite:///:memory:`  
+✅ **Rate limit disabled** - Tests run without rate limiting delays  
+✅ **Descriptive test names** - Clear indication of what's being tested  
+✅ **SQLAlchemy 2.0 compliance** - Future-proof code with modern APIs  
+✅ **Proper JSON access** - Using `get_json()` method instead of deprecated property
+
 ## Future Enhancements
 
 This project serves as a solid foundation for a production REST API. Potential improvements include:
 
-### Testing
+### Advanced Testing
 
-- **Unit Tests** - pytest for testing models and utilities
-- **Integration Tests** - Test API endpoints with test database
-- **Code Coverage** - pytest-cov for coverage reports
-- **CI/CD Pipeline** - GitHub Actions for automated testing
+- **Code Coverage** - pytest-cov for coverage reports (`pytest --cov=app tests/`)
+- **CI/CD Pipeline** - GitHub Actions for automated testing on push/PR
+- **Load Testing** - Locust or Apache Bench for performance testing
+- **Security Testing** - OWASP ZAP for vulnerability scanning
 
 ### API Features
 

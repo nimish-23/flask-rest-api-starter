@@ -9,7 +9,8 @@ def test_register_success(client, test_user):
         "username": "newuser"
     })
     assert response.status_code == 201
-    assert 'message' in response.json
+    data = response.get_json()
+    assert 'message' in data
 
 def test_register_user_exists(client, test_user):
     # test_user fixture already created a user with test@example.com
@@ -19,7 +20,8 @@ def test_register_user_exists(client, test_user):
         "username": "testuser"
     })
     assert response.status_code == 409
-    assert 'error' in response.json
+    data = response.get_json()
+    assert 'error' in data
 
 # ===== Invalid Field Values =====
 @pytest.mark.parametrize("email,password,username,description", [
@@ -38,7 +40,8 @@ def test_register_invalid_field_values(client, email, password, username, descri
         "username": username
     })
     assert response.status_code == 400, f"Failed for: {description}"
-    assert 'error' in response.json
+    data = response.get_json()
+    assert 'error' in data
 
 # ===== Missing Required Fields =====
 @pytest.mark.parametrize("data,description", [
@@ -51,7 +54,8 @@ def test_register_missing_fields(client, data, description):
     """Test registration with missing required fields"""
     response = client.post('/auth/register', json=data)
     assert response.status_code == 400, f"Failed for: {description}"
-    assert 'error' in response.json
+    data = response.get_json()
+    assert 'error' in data
 
 # ===== Wrong Data Types =====
 @pytest.mark.parametrize("email,password,username,description", [
@@ -67,7 +71,8 @@ def test_register_wrong_data_types(client, email, password, username, descriptio
         "username": username
     })
     assert response.status_code == 400, f"Failed for: {description}"
-    assert 'error' in response.json
+    data = response.get_json()
+    assert 'error' in data
 
 # ===== Duplicate User =====
 def test_register_duplicate_username(client, test_user):
@@ -78,7 +83,8 @@ def test_register_duplicate_username(client, test_user):
         "username": "testuser"  # Same username as test_user
     })
     assert response.status_code == 409
-    assert 'error' in response.json
+    data = response.get_json()
+    assert 'error' in data
 
 # ===== Invalid Content Type =====
 def test_register_wrong_content_type(client):

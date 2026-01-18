@@ -5,9 +5,10 @@ def test_get_me_success(client, test_user, auth_headers):
     response = client.get('/users/me', headers=auth_headers)
     
     assert response.status_code == 200
-    assert response.json['id'] == test_user.id
-    assert response.json['username'] == 'testuser'
-    assert response.json['email'] == 'test@example.com'
+    data = response.get_json()
+    assert data['id'] == test_user.id
+    assert data['username'] == 'testuser'
+    assert data['email'] == 'test@example.com'
 
 
 @pytest.mark.parametrize("headers,description", [
