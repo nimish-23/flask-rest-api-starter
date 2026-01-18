@@ -1,6 +1,5 @@
 import pytest
 
-
 def test_login_success(client, test_user):
     """Test successful login with valid credentials."""
     response = client.post('/auth/login', json={
