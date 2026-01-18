@@ -81,14 +81,14 @@ def test_register_duplicate_username(client, test_user):
     assert 'error' in response.json
 
 # ===== Invalid Content Type =====
-@pytest.mark.parametrize("data,content_type,description", [
-    ("not json data", "text/plain", "plain text instead of JSON"),
-    (None, None, "None as JSON body"),
-])
-def test_register_invalid_content_type(client, data, content_type, description):
-    """Test registration with invalid content type"""
-    if content_type:
-        response = client.post('/auth/register', data=data, content_type=content_type)
-    else:
-        response = client.post('/auth/register', json=data)
-    assert response.status_code == 400, f"Failed for: {description}"
+def test_register_wrong_content_type(client):
+    """Test registration with plain text instead of JSON"""
+    response = client.post('/auth/register', data="not json data", content_type='text/plain')
+    # Flask returns 415 (Unsupported Media Type) for wrong content type
+    assert response.status_code == 415, "Should reject non-JSON content type"
+
+def test_register_none_json_body(client):
+    """Test registration with None as JSON body"""
+    response = client.post('/auth/register', json=None)
+    # Flask returns 415 (Unsupported Media Type) for None as JSON
+    assert response.status_code == 415, "Should reject None as JSON body"
