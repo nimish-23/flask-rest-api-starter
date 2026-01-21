@@ -13,6 +13,7 @@ A production-ready Flask REST API boilerplate with JWT authentication, database 
 - ✅ **Modular Architecture** - Organized routes, models, and schemas
 - ✅ **Security Best Practices** - Password hashing, `to_dict()` serialization
 - ✅ **Environment-based Configuration** - Separate dev/prod settings
+- ✅ **Docker Support** - Production-ready Dockerfile and .dockerignore
 
 ## Project Structure
 
@@ -114,6 +115,119 @@ The application will run on `http://127.0.0.1:5000`
 ```bash
 gunicorn -w 4 -b 0.0.0.0:8000 run:app
 ```
+
+## Docker Deployment
+
+This project includes production-ready Docker support for easy containerization and deployment.
+
+### Prerequisites
+
+- Docker Desktop installed
+- Docker daemon running
+
+### Quick Start with Docker
+
+**1. Build the Docker image:**
+
+```bash
+docker build -t flask-restapi-starter .
+```
+
+**2. Run the container:**
+
+```bash
+docker run --rm -p 5000:5000 flask-restapi-starter
+```
+
+The API will be accessible at `http://localhost:5000`
+
+**3. Run in detached mode (background):**
+
+```bash
+docker run -d -p 5000:5000 --name flask-api flask-restapi-starter
+```
+
+**4. Stop the container:**
+
+```bash
+docker stop flask-api
+```
+
+### Docker Configuration
+
+**Dockerfile highlights:**
+
+- ✅ Uses `python:3.13-slim` base image for minimal footprint
+- ✅ Optimized layer caching for faster rebuilds
+- ✅ Environment variables configured for production
+- ✅ Runs on `0.0.0.0:5000` for external accessibility
+- ✅ Includes all dependencies (Flask-Migrate, SQLAlchemy, etc.)
+
+**.dockerignore optimizations:**
+
+- Excludes virtual environments (`env/`, `venv/`)
+- Excludes test files and artifacts
+- Excludes `.env` files (configure via environment variables)
+- Excludes git and editor files
+- Reduces image size and build time
+
+### Environment Variables in Docker
+
+To pass environment variables to the container:
+
+```bash
+docker run --rm -p 5000:5000 \
+  -e SECRET_KEY="your-secret-key" \
+  -e JWT_SECRET_KEY="your-jwt-key" \
+  -e DATABASE_URL="sqlite:///app.db" \
+  flask-restapi-starter
+```
+
+Or use an env file:
+
+```bash
+docker run --rm -p 5000:5000 --env-file .env.docker flask-restapi-starter
+```
+
+### Testing the Dockerized API
+
+Once the container is running, test the endpoints:
+
+**Check container status:**
+
+```bash
+docker ps
+```
+
+**Test the API (will return 404 for root, which is expected):**
+
+```bash
+curl http://localhost:5000/
+```
+
+**Test registration endpoint:**
+
+```bash
+curl -X POST http://localhost:5000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","email":"test@example.com","password":"password123"}'
+```
+
+**View container logs:**
+
+```bash
+docker logs <container-id-or-name>
+```
+
+### Production Deployment Notes
+
+> **Warning:** The default configuration uses Flask's development server. For production deployments, consider:
+>
+> - Using Gunicorn as the WSGI server (modify CMD in Dockerfile)
+> - Setting `debug=False` in run.py
+> - Using a production database (PostgreSQL)
+> - Implementing proper secret management
+> - Setting up reverse proxy (Nginx)
 
 ## API Endpoints
 
@@ -498,7 +612,6 @@ This project serves as a solid foundation for a production REST API. Potential i
 
 ### Infrastructure
 
-- **Docker Support** - Dockerfile and docker-compose.yml
 - **PostgreSQL** - Production database configuration
 - **Caching Layer** - Redis integration for performance
 - **Logging & Monitoring** - Structured logging with ELK stack

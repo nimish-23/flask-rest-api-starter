@@ -1,0 +1,34 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Environment variables (SECRETS!)
+.env
+.env.*
+
+# Test & dev artifacts
+.pytest_cache/
+tests/
+test_output.txt
+test_results.txt
+
+# Flask / app runtime data
+instance/
+migrations/
+
+# Git & editor files
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
